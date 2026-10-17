@@ -43,12 +43,13 @@ Measured face mix stays a continuous 0–1 control. Coverage affects shader edge
 coverage. Window radius, borders, rounding power, per-application rules, and
 layer materials remain configured in Hyprland.
 
-**Refraction → Neighbor contribution** adjusts how strongly adjacent tiled
-windows appear in the glass. `1` preserves the full neighbour scene; `0` uses
-the clean background instead. Lower values soften neighbour content without
-fading the main frosted area. It affects text and opaque windows too, and leaves
-floating-window and layer-surface glass unchanged. Existing profiles default
-to `1`. The control appears when the renderer exposes this parameter.
+**Refraction → Neighbor contribution** adjusts how strongly adjacent,
+non-overlapping windows appear in the glass, including separate floating panes.
+`1` preserves the full neighbour scene; `0` uses the clean background instead.
+Lower values soften neighbour content without fading the main frosted area.
+It affects text and opaque windows too. Overlapping floats and layer surfaces
+retain native behavior. Existing profiles default to `1`. The control appears
+when the renderer exposes this parameter.
 
 **Neighbor falloff** adds a smooth exponential fade from the receiving pane's
 rounded edge toward its center. `0` keeps uniform contribution; higher values
