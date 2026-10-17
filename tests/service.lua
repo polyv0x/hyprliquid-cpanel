@@ -106,6 +106,7 @@ local function reply(state)
         { name = "rim_opacity", min = 0, max = 1.6, default = 0 },
         { name = "inner_refraction_amount", min = -120, max = 120, default = 0 },
         { name = "coverage_offset", min = -1, max = 1, default = 0.1 },
+        { name = "outer_refraction_inv_height", min = 0.001, max = 1, default = 0.034 },
     }, presets = { { id = "platform", valid = true }, { id = "lens", valid = true } } }
 end
 local function applied(state, profile)
@@ -156,14 +157,14 @@ expect(#live.queue == 1 and live.queue[1].request.profile.overrides.inner_refrac
     "a continuous drag must not postpone the live-update deadline")
 
 h.request("save", { new_name = "Negative glass" })
-expect(h.view().selected == "Negative glass" and #h.view().profiles == 1)
+expect(h.view().selected == "Negative_glass" and #h.view().profiles == 1)
 local file = h.files["/data/profiles.json"]
 expect(h.noctalia.json.decode(file).profiles[1].overrides.inner_refraction_amount == -79)
 h.failRename = true
-h.request("rename", { name = "Negative glass", new_name = "Renamed" })
-expect(h.files["/data/profiles.json"] == file and h.view().profiles[1].name == "Negative glass")
+h.request("rename", { name = "Negative_glass", new_name = "Renamed" })
+expect(h.files["/data/profiles.json"] == file and h.view().profiles[1].name == "Negative_glass")
 h.failRename = false
-h.request("rename", { name = "Negative glass", new_name = "Renamed" })
+h.request("rename", { name = "Negative_glass", new_name = "Renamed" })
 expect(h.view().selected == "Renamed")
 h.start()
 h.reply(reply(state))
@@ -181,6 +182,64 @@ expect(h.view().selected == "" and #h.queue == 0, "terminal edit must release ow
 h.request("delete", { name = "Renamed" })
 expect(#h.view().profiles == 0 and #h.queue == 0, "deleting profile must not mutate renderer")
 print("PASS: atomic persistence, rename failure, restart, reload restoration and external ownership")
+
+h = newHost()
+h.request("save", { new_name = "Before" })
+h.request("save", { new_name = "Replace me" })
+h.request("save", { new_name = "After" })
+local originals = copy(h.view().profiles)
+local replacement = { base_preset = "lens", enabled = false, overrides = { inner_refraction_amount = -31 } }
+h.request("edit", { profile = replacement, theme_mode = "follow", flush = true })
+state = applied(baseline, h.queue[1].request.profile); h.reply(reply(state))
+file = h.files["/data/profiles.json"]
+for _, confirmation in ipairs({ false, "true" }) do
+    h.request("save", { new_name = "Replace me", overwrite = confirmation })
+    expect(h.view().error and h.files["/data/profiles.json"] == file and equal(h.view().profiles, originals),
+        "duplicate saves require explicit boolean confirmation")
+end
+h.request("rename", { name = "Before", new_name = "Replace me", overwrite = true })
+expect(h.view().error and equal(h.view().profiles, originals), "overwrite confirmation must not bypass rename collisions")
+edit(h, -32, false, "follow")
+h.request("save", { new_name = "Replace me", overwrite = true })
+expect(h.view().error and h.files["/data/profiles.json"] == file, "overwrite must wait for pending edits")
+h.tick(75); state = applied(state, h.queue[1].request.profile); h.reply(reply(state))
+file = h.files["/data/profiles.json"]
+local callsBeforeOverwrite = #h.calls
+h.failRename = true
+h.request("save", { new_name = "Replace me", overwrite = true })
+expect(h.view().storage_error and h.files["/data/profiles.json"] == file and equal(h.view().profiles, originals),
+    "failed overwrite must preserve the original profile in memory and on disk")
+h.failRename = false
+h.request("save", { new_name = "Replace me", overwrite = true })
+local overwritten = h.noctalia.json.decode(h.files["/data/profiles.json"])
+expect(not h.view().error and not h.view().storage_error and #overwritten.profiles == 3)
+expect(equal(overwritten.profiles[1], originals[1]) and equal(overwritten.profiles[3], originals[3]),
+    "overwrite must preserve other profiles and list order")
+expect(overwritten.profiles[2].name == "Replace_me" and overwritten.profiles[2].base_preset == "lens"
+    and overwritten.profiles[2].enabled == false and overwritten.profiles[2].theme_mode == "follow"
+    and overwritten.profiles[2].overrides.inner_refraction_amount == -32)
+expect(overwritten.selected == "Replace_me" and overwritten.current.overrides.inner_refraction_amount == -32)
+expect(#h.calls == callsBeforeOverwrite, "saving an overwrite must not reapply the renderer")
+h.start(); h.reply(reply(state))
+expect(#h.queue == 0 and h.view().selected == "Replace_me" and equal(h.view().profiles, overwritten.profiles),
+    "overwritten profiles must survive restart")
+print("PASS: confirmed overwrite, pending edits, atomic failure, profile order and restart")
+
+h = newHost()
+h.request("save", { new_name = " Glass  name " })
+expect(h.view().selected == "_Glass__name_" and h.view().profiles[1].name == "_Glass__name_",
+    "every space, including surrounding and repeated spaces, must become an underscore")
+h.request("rename", { name = "_Glass__name_", new_name = "Renamed glass" })
+expect(h.view().selected == "Renamed_glass" and h.view().profiles[1].name == "Renamed_glass")
+file = h.files["/data/profiles.json"]
+h.request("save", { new_name = "Renamed glass" })
+expect(h.view().error and h.files["/data/profiles.json"] == file,
+    "duplicate checks must use the name after spaces become underscores")
+for _, name in ipairs({ "", false, "bad\tname" }) do
+    h.request("save", { new_name = name })
+    expect(h.view().error and h.files["/data/profiles.json"] == file, "invalid names must remain rejected")
+end
+print("PASS: space normalization for save, rename and duplicate detection")
 
 h = newHost()
 edit(h, -5, true, "follow")
@@ -309,7 +368,7 @@ local ui = setmetatable({}, { __index = function(_, kind) return function(props,
 local panelEnv = h.load(root .. "/hyprliquid/panel.luau", { ui = ui, panel = { render = function(tree) h.tree = tree end, close = function() end } })
 panelEnv.onOpen()
 local function find(node, key)
-    if node.props.key == key then return node end
+    if node.props.key == key or node.kind == key then return node end
     for _, child in ipairs(node.children) do local found = find(child, key); if found then return found end end
 end
 find(h.tree, "preset").props.onChange("1", "lens")
@@ -330,6 +389,10 @@ find(h.tree, "inner_refraction_amount-slider").props.onDragEnd()
 expect(h.queue[1].request.profile.overrides.inner_refraction_amount == -55)
 state = applied(state, h.queue[1].request.profile); h.reply(reply(state))
 local callsBeforeEcho = #h.calls
+local logarithmicSlider = find(h.tree, "outer_refraction_inv_height-slider").props
+local snapped = logarithmicSlider.min + math.floor((logarithmicSlider.value - logarithmicSlider.min) / logarithmicSlider.step + 0.5) * logarithmicSlider.step
+logarithmicSlider.onChange(string.format("%.6f", snapped))
+expect(#h.calls == callsBeforeEcho and not h.view().pending, "native step rounding must not create a material override")
 find(h.tree, "inner_refraction_amount-slider").props.onChange("-55.000000")
 find(h.tree, "inner_refraction_amount-slider").props.onDragEnd()
 find(h.tree, "preset").props.onChange("1", "lens")
@@ -347,3 +410,38 @@ find(h.tree, "rim_opacity-slider").props.onChange("1.600000")
 expect(h.view().ack == invalidAck and h.view().draft.overrides.rim_opacity == 999,
     "native clamping of a pending invalid profile must not create an edit")
 print("PASS: actual panel callbacks, select index, drag-end flush and per-field reset")
+
+h = newHost()
+local overwritePanel = h.load(root .. "/hyprliquid/panel.luau", { ui = ui,
+    panel = { render = function(tree) h.tree = tree end, close = function() end } })
+overwritePanel.onOpen()
+find(h.tree, "profiles-heading").props.onClick()
+find(h.tree, "input").props.onChange("My glass")
+find(h.tree, "profile-save").props.onClick()
+expect(#h.view().profiles == 1 and h.view().selected == "My_glass" and not find(h.tree, "overwrite-dialog"),
+    "a new name must save without an overwrite dialog")
+expect(find(h.tree, "input").props.value == "My_glass", "Save must show the normalized name in the input")
+edit(h, -48, true, "follow")
+state = applied(baseline, h.queue[1].request.profile); h.reply(reply(state))
+file = h.files["/data/profiles.json"]
+local writesBeforeDialog = h.writes
+find(h.tree, "input").props.onChange("My glass")
+find(h.tree, "profile-save").props.onClick()
+expect(find(h.tree, "overwrite-dialog") and not find(h.tree, "profile-save") and not find(h.tree, "preset"),
+    "duplicate Save must show a modal confirmation instead of editable controls")
+expect(h.writes == writesBeforeDialog and h.files["/data/profiles.json"] == file and not h.view().error,
+    "opening the confirmation must not submit a save or show a duplicate-name error")
+find(h.tree, "overwrite-cancel").props.onClick()
+expect(not find(h.tree, "overwrite-dialog") and find(h.tree, "input").props.value == "My_glass")
+expect(h.writes == writesBeforeDialog and h.files["/data/profiles.json"] == file, "Cancel must preserve the saved profile")
+find(h.tree, "profile-save").props.onClick()
+overwritePanel.onClose(); overwritePanel.onOpen()
+expect(not find(h.tree, "overwrite-dialog") and h.files["/data/profiles.json"] == file,
+    "closing or dismissing the panel must cancel the confirmation")
+find(h.tree, "profile-save").props.onClick()
+find(h.tree, "overwrite-confirm").props.onClick()
+expect(not find(h.tree, "overwrite-dialog") and not h.view().error and #h.view().profiles == 1)
+expect(h.state.request.overwrite == true and h.view().selected == "My_glass"
+    and h.view().profiles[1].overrides.inner_refraction_amount == -48 and h.view().profiles[1].theme_mode == "follow")
+expect(h.writes == writesBeforeDialog + 1, "Confirm must replace the profile exactly once")
+print("PASS: panel save, overwrite dialog, Cancel, dismissal and confirmed replacement")

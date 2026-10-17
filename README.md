@@ -60,12 +60,16 @@ changes cancel pending edits instead of silently overwriting them.
 
 Each parameter's reset removes its explicit override. **Reset to configuration**
 removes the entire panel layer and clears the saved-profile selection. Choosing
-a base preset starts with that preset's inherited scalar values. **Save new**
+a base preset starts with that preset's inherited scalar values. **Save**
 saves the current confirmed base, theme mode, enable state, and sparse overrides.
-Names are unique. **Rename** and **Delete** operate on the chosen saved profile;
-deleting never deletes a renderer config preset or changes the current material.
+Spaces in names become underscores when saving or renaming, before checking for
+an existing name.
+Saving an existing name asks whether to overwrite that profile; Cancel keeps it
+unchanged. Names remain unique. **Rename** and **Delete** operate on the chosen
+saved profile; deleting never deletes a renderer config preset or changes the
+current material.
 Editing after selecting a saved profile updates the automatically saved current
-settings and leaves that named profile unchanged. Save new creates another
+settings and leaves that named profile unchanged. Save creates or updates a
 named snapshot; it is not required to keep ordinary edits across restarts.
 
 Current settings and named profiles are versioned JSON in

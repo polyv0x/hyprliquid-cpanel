@@ -186,9 +186,12 @@ local function handle(request)
             table.remove(nextData.profiles, index)
             if nextData.selected == request.name then nextData.selected = "" end
         else
-            local name = request.new_name
-            if not profiles.validName(name) then errorMessage = "Use a profile name of 1–80 characters without surrounding spaces"; publish(); return end
-            if profiles.find(nextData, name) then errorMessage = "A profile with that name already exists"; publish(); return end
+            local name = profiles.normalizeName(request.new_name)
+            if not profiles.validName(name) then errorMessage = "Use a profile name of 1–80 printable characters"; publish(); return end
+            local duplicate, duplicateIndex = profiles.find(nextData, name)
+            if duplicate and (kind ~= "save" or request.overwrite ~= true) then
+                errorMessage = "A profile with that name already exists"; publish(); return
+            end
             if kind == "rename" then
                 if not existing then errorMessage = "Saved profile not found"; publish(); return end
                 existing.name = name
@@ -197,7 +200,8 @@ local function handle(request)
                 if not available or not confirmed then errorMessage = "Connect to Hyprliquid before saving"; publish(); return end
                 local saved = profiles.snapshot(confirmed, themeMode)
                 saved.name = name
-                table.insert(nextData.profiles, saved)
+                if duplicate then nextData.profiles[duplicateIndex] = saved
+                else table.insert(nextData.profiles, saved) end
                 nextData.current = profiles.snapshot(confirmed, themeMode)
                 nextData.selected, nextData.checkpoint = name, profiles.checkpoint(confirmed)
             end

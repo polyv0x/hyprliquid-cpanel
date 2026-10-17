@@ -111,11 +111,21 @@ end
 ''')
         with (plugin / 'panel.luau').open('a') as file:
             file.write('''
-function onIpc(event)
+function onIpc(event, payload)
     if event == "test-expand" then
         for _, group in ipairs(controls.groups) do expanded[group.name] = true end
         expanded.Profiles = true
         render()
+    elseif event == "test-save" then
+        profileName = payload
+        saveProfile()
+    elseif event == "test-cancel-overwrite" then
+        cancelOverwrite()
+    elseif event == "test-confirm-overwrite" then
+        confirmOverwrite()
+    elseif event == "test-inspect" then
+        noctalia.writeFile(noctalia.getenv("HYPRLIQUID_TEST_VIEW") .. ".panel",
+            noctalia.json.encode({ overwrite_name = overwriteName or "" }))
     end
 end
 ''')
@@ -177,6 +187,14 @@ end
                 except json.JSONDecodeError:
                     return {}
 
+            def panel_view():
+                msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-inspect')
+                path = base / 'view.json.panel'
+                try:
+                    return json.loads(path.read_text()) if path.exists() else {}
+                except json.JSONDecodeError:
+                    return {}
+
             counter = 0
 
             def request(kind, **fields):
@@ -215,9 +233,30 @@ end
             assert invalid.get('error') and control('state') == before_invalid
             request('edit', profile=profile, theme_mode='follow', flush=True)
             saved = request('save', new_name='Signed glass')
-            assert saved['selected'] == 'Signed glass' and not saved.get('storage_error'), saved
+            assert saved['selected'] == 'Signed_glass' and not saved.get('storage_error'), saved
             path = next((base / 'state').rglob('profiles.json'))
             assert json.loads(path.read_text())['profiles'][0]['overrides']['coverage_offset'] < 0
+            updated_profile = {**profile, 'overrides': {**profile['overrides'], 'coverage_offset': -0.55}}
+            request('edit', profile=updated_profile, theme_mode='follow', flush=True)
+            before_overwrite, before_renderer = path.read_text(), control('state')
+            msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-save', 'Signed glass')
+            wait_for(lambda: panel_view().get('overwrite_name') == 'Signed_glass', [compositor, shell])
+            time.sleep(0.2)
+            run(['grim', str(BUILD / 'noctalia-overwrite-dialog.png')])
+            assert path.read_text() == before_overwrite and not view().get('error')
+            msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-cancel-overwrite')
+            wait_for(lambda: panel_view().get('overwrite_name') == '', [compositor, shell])
+            assert path.read_text() == before_overwrite, 'Cancel changed the saved profile'
+            msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-save', 'Signed glass')
+            wait_for(lambda: panel_view().get('overwrite_name') == 'Signed_glass', [compositor, shell])
+            msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-confirm-overwrite')
+            wait_for(lambda: math.isclose(view()['profiles'][0]['overrides']['coverage_offset'], -0.55, abs_tol=1e-6),
+                     [compositor, shell])
+            overwritten = json.loads(path.read_text())
+            assert len(overwritten['profiles']) == 1 and overwritten['selected'] == 'Signed_glass'
+            assert math.isclose(overwritten['profiles'][0]['overrides']['coverage_offset'], -0.55, abs_tol=1e-6)
+            assert control('state') == before_renderer, 'Overwrite reapplied the renderer'
+            print('PASS: real overwrite dialog, cancellation and confirmed profile replacement', flush=True)
             msg('theme-mode-set', 'light')
             wait_for(lambda: control('state')['theme'] == 'light', [compositor, shell])
             followed = control('state')['material']
@@ -230,21 +269,21 @@ end
             assert control('state')['revision'] == revision, 'Noctalia exit changed renderer'
             shell = start()
             restored = wait_for(lambda: (v if (v := view()).get('available') else None), [compositor, shell])
-            assert restored['selected'] == 'Signed glass', restored
+            assert restored['selected'] == 'Signed_glass', restored
             assert control('state')['revision'] == revision, 'Restart unnecessarily reapplied matching profile'
             ctl('reload')
             msg('plugin', 'polyv0x/hyprliquid:service', 'all', 'refresh')
             wait_for(lambda: control('state')['material']['inner_refraction_amount'] == -43, [compositor, shell])
-            renamed = request('rename', name='Signed glass', new_name='Renamed glass')
-            assert renamed['selected'] == 'Renamed glass'
+            renamed = request('rename', name='Signed_glass', new_name='Renamed glass')
+            assert renamed['selected'] == 'Renamed_glass'
             request('reset')
-            selected = request('select', name='Renamed glass')
-            assert selected['selected'] == 'Renamed glass'
+            selected = request('select', name='Renamed_glass')
+            assert selected['selected'] == 'Renamed_glass'
             control('apply', patch={'overrides': {'inner_refraction_amount': -17}})
             msg('plugin', 'polyv0x/hyprliquid:service', 'all', 'refresh')
             wait_for(lambda: view().get('selected') == '', [compositor, shell])
             assert control('state')['material']['inner_refraction_amount'] == -17
-            request('delete', name='Renamed glass')
+            request('delete', name='Renamed_glass')
             assert control('state')['material']['inner_refraction_amount'] == -17
             before_disable = control('state')
             msg('plugins', 'disable', 'polyv0x/hyprliquid')

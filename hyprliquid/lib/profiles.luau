@@ -5,6 +5,11 @@ function M.empty()
     return { version = 2, profiles = {}, selected = "" }
 end
 
+function M.normalizeName(name)
+    if type(name) ~= "string" then return nil end
+    return (name:gsub(" ", "_"))
+end
+
 function M.validName(name)
     return type(name) == "string" and #name > 0 and #name <= 80
         and name == name:match("^%s*(.-)%s*$") and not name:find("%c")

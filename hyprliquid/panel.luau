@@ -1,11 +1,14 @@
 local bridge = require("./lib/bridge.luau")
 local controls = require("./lib/controls.luau")
+local profiles = require("./lib/profiles.luau")
 local view = noctalia.state.get("view") or {}
 local draft, mode = view.draft, view.theme_mode
 local opened, awaiting, dirty = false, false, false
 local lastRequest, serial = "", 0
 local session = tostring(noctalia.nowMs())
 local profileName, profileChoice = "", ""
+local profileNameRevision = 0
+local overwriteName
 local expanded = { Overall = true, Blur = true }
 local render
 
@@ -16,6 +19,42 @@ local function send(kind, fields)
     request.kind, request.id = kind, lastRequest
     awaiting = true
     noctalia.state.set("request", request)
+end
+
+local function normalizeProfileName()
+    local name = profiles.normalizeName(profileName)
+    if name ~= profileName then
+        -- Inputs retain their text, so recreate the field to show the new name.
+        profileName, profileNameRevision = name, profileNameRevision + 1
+    end
+    return name
+end
+
+local function saveProfile()
+    if awaiting or view.pending then return end
+    normalizeProfileName()
+    for _, profile in ipairs(view.profiles or {}) do
+        if profile.name == profileName then
+            overwriteName = profileName
+            render()
+            return
+        end
+    end
+    send("save", { new_name = profileName })
+    render()
+end
+
+local function cancelOverwrite()
+    overwriteName = nil
+    render()
+end
+
+local function confirmOverwrite()
+    if not overwriteName or awaiting or view.pending then return end
+    local name = overwriteName
+    overwriteName = nil
+    send("save", { new_name = name, overwrite = true })
+    render()
 end
 
 local function edit(flush)
@@ -39,6 +78,8 @@ local function parameterRow(parameter, waiting)
     local value = view.confirmed.material[name] or parameter.default
     if waiting and overridden then value = draft.overrides[name] end
     local low, high, step, position = controls.slider(parameter, value)
+    -- Match the native thumb's step rounding so its render echo is not an edit.
+    position = math.max(low, math.min(high, low + math.floor((position - low) / step + 0.5) * step))
     local children = {
         ui.row({ gap = 8, align = "center" }, {
             ui.label({ text = controls.label(name), flexGrow = 1 }),
@@ -73,6 +114,20 @@ end
 render = function()
     if not opened then return end
     local waiting = awaiting or view.pending == true
+    if overwriteName then
+        panel.render(ui.column({ key = "overwrite-dialog", gap = 16, padding = 24,
+            flexGrow = 1, justify = "center" }, {
+            ui.glyph({ name = "device-floppy", size = 32, color = "primary" }),
+            ui.label({ text = "Overwrite saved profile?", fontSize = 20, fontWeight = "bold" }),
+            text("A profile named “" .. overwriteName .. "” already exists. Replace it with the current settings?"),
+            ui.row({ gap = 8, justify = "end" }, {
+                ui.button({ key = "overwrite-cancel", text = "Cancel", variant = "outline", onClick = cancelOverwrite }),
+                ui.button({ key = "overwrite-confirm", text = "Overwrite", variant = "primary", enabled = not waiting,
+                    onClick = confirmOverwrite }),
+            }),
+        }))
+        return
+    end
     local body = {}
     local ready = view.available == true and view.confirmed and draft and view.descriptor
     if view.error then table.insert(body, text(view.error, "error")) end
@@ -139,17 +194,20 @@ render = function()
                 end
             end }))
         table.insert(profileRows, text(view.selected ~= "" and ("Selected: " .. (view.selected or "")) or "No named profile selected"))
-        table.insert(profileRows, ui.input({ key = "profile-name", value = profileName, placeholder = "New profile name",
+        table.insert(profileRows, ui.input({ key = "profile-name-" .. tostring(profileNameRevision), value = profileName, placeholder = "Profile name",
             onChange = function(value) profileName = value end }))
         table.insert(profileRows, ui.row({ gap = 8 }, {
-            ui.button({ text = "Save new", glyph = "device-floppy", enabled = not waiting,
-                onClick = function() send("save", { new_name = profileName }); render() end }),
+            ui.button({ key = "profile-save", text = "Save", glyph = "device-floppy", enabled = not waiting,
+                onClick = saveProfile }),
             ui.button({ text = "Rename", enabled = not waiting and chosen > 0,
-                onClick = function() send("rename", { name = profileChoice, new_name = profileName }); profileChoice = profileName; render() end }),
+                onClick = function()
+                    local name = normalizeProfileName()
+                    send("rename", { name = profileChoice, new_name = name }); profileChoice = name; render()
+                end }),
             ui.button({ text = "Delete", variant = "destructive", enabled = not waiting and chosen > 0,
                 onClick = function() send("delete", { name = profileChoice }); profileChoice = ""; render() end }),
         }))
-        table.insert(profileRows, text("Changes are saved automatically. Save new keeps a named snapshot you can return to later."))
+        table.insert(profileRows, text("Changes are saved automatically. Save keeps a named snapshot you can return to later."))
 
         if expanded.Profiles then
             table.insert(body, ui.column({ key = "profiles", gap = 10 }, profileRows))
@@ -200,6 +258,7 @@ end)
 
 function onOpen()
     opened = true
+    overwriteName = nil
     view = noctalia.state.get("view") or {}
     draft, mode = bridge.copy(view.draft), view.theme_mode
     awaiting, dirty = false, false
@@ -209,6 +268,7 @@ function onOpen()
 end
 
 function onClose()
+    overwriteName = nil
     flush()
     opened = false
     noctalia.state.set("panel_open", false)
