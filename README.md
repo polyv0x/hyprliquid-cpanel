@@ -45,11 +45,14 @@ layer materials remain configured in Hyprland.
 
 **Refraction → Neighbor contribution** adjusts how strongly neighbouring
 windows appear in the glass, including floating panes that touch or overlap.
-`1` preserves the full neighbour scene; `0` uses the clean background instead.
+`1` preserves the full neighbour scene; `0` removes the additional neighbour
+image while preserving windows underneath the glass.
 Lower values soften neighbour content without fading the main frosted area.
 It affects text and opaque windows too. The control acts on the neighbour image
 sampled outside the receiving pane; windows directly underneath still follow
-normal transparency and stacking. Layer surfaces retain native behavior.
+normal transparency and stacking, including at refracted edges. Partial overlap
+is handled per pixel, so adjacent portions still respond to the sliders.
+Layer surfaces retain native behavior.
 Existing profiles default to `1`. The control appears when the renderer exposes
 this parameter.
 
@@ -59,6 +62,7 @@ fade it faster. Try `0.5`, which halves the contribution every 16 logical pixels
 at the default effect scale. The main frost stays present. This is an artistic
 edge fade, not a simulation of physical caustics. It affects neighbour images
 in both refraction and edge bleed, and defaults to `0` in existing profiles.
+Underlying windows stay visible instead of fading toward the wallpaper.
 
 **Theme** selects the renderer preset's dark or light face shading and rim
 highlights. All five current built-in presets provide both variants; clear glass
