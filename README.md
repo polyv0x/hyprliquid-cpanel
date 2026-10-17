@@ -37,11 +37,25 @@ installation directory.
 ## Editing and ownership
 
 The panel discovers presets, scalar defaults, and bounds from the renderer.
-All 32 material parameters are grouped; expand a group to see its controls.
+All 34 material parameters are grouped; expand a group to see its controls.
 Inverse-height controls use a logarithmic scale and display their actual values.
 Measured face mix stays a continuous 0–1 control. Coverage affects shader edge
 coverage. Window radius, borders, rounding power, per-application rules, and
 layer materials remain configured in Hyprland.
+
+**Refraction → Neighbor contribution** adjusts how strongly adjacent tiled
+windows appear in the glass. `1` preserves the full neighbour scene; `0` uses
+the clean background instead. Lower values soften neighbour content without
+fading the main frosted area. It affects text and opaque windows too, and leaves
+floating-window and layer-surface glass unchanged. Existing profiles default
+to `1`. The control appears when the renderer exposes this parameter.
+
+**Neighbor falloff** adds a smooth exponential fade from the receiving pane's
+rounded edge toward its center. `0` keeps uniform contribution; higher values
+fade it faster. Try `0.5`, which halves the contribution every 16 logical pixels
+at the default effect scale. The main frost stays present. This is an artistic
+edge fade, not a simulation of physical caustics. It affects neighbour images
+in both refraction and edge bleed, and defaults to `0` in existing profiles.
 
 **Theme** selects the renderer preset's dark or light face shading and rim
 highlights. All five current built-in presets provide both variants; clear glass

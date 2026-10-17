@@ -3,7 +3,7 @@ local M = {}
 M.groups = {
     { name = "Overall", fields = { "glass_opacity", "effect_scale" } },
     { name = "Blur", fields = { "blur_sigma", "blur_alpha0", "blur_alpha3", "blur_dist3" } },
-    { name = "Refraction", fields = { "outer_refraction_amount", "outer_refraction_inv_height", "inner_refraction_amount", "inner_refraction_inv_height", "refraction_threshold0", "refraction_threshold1", "refraction_opacity" } },
+    { name = "Refraction", fields = { "outer_refraction_amount", "outer_refraction_inv_height", "inner_refraction_amount", "inner_refraction_inv_height", "refraction_threshold0", "refraction_threshold1", "refraction_opacity", "neighbor_contribution", "neighbor_falloff" } },
     { name = "Color fringe", fields = { "aberration_amount", "inv_aberration_height" } },
     { name = "Face", fields = { "face_opacity", "holding_tone_opacity", "face_slope", "face_intercept", "use_measured_face" } },
     { name = "Edge bleed", fields = { "edge_bleed_amount", "edge_bleed_inv_height", "edge_bleed_opacity", "bleed_darken" } },

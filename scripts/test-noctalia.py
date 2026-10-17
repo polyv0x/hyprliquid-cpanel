@@ -209,7 +209,7 @@ end
                     raise RuntimeError(f'Request {ident} timed out: ' + repr({key: current.get(key) for key in ('ack', 'pending', 'error', 'draft')}))
 
             ready = wait_for(lambda: (v if (v := view()).get('available') else None), [compositor, shell])
-            assert len(ready['descriptor']['parameters']) == 32
+            assert len(ready['descriptor']['parameters']) == 34
             msg('panel-toggle', 'polyv0x/hyprliquid:panel')
             time.sleep(0.6)
             run(['grim', str(BUILD / 'noctalia-panel.png')])
@@ -224,10 +224,12 @@ end
                     assert current['material']['use_measured_face'] == 1
                     assert math.isclose(current['material']['face_intercept'], 0.06 if theme == 'dark' else 0.30, abs_tol=1e-6)
             print('PASS: panel service selects real dark/light material variants for all five presets', flush=True)
-            profile = {'base_preset': 'platform', 'enabled': True, 'overrides': {'inner_refraction_amount': -43, 'coverage_offset': -0.45, 'rim_opacity': 0.15}}
+            profile = {'base_preset': 'platform', 'enabled': True, 'overrides': {'inner_refraction_amount': -43, 'coverage_offset': -0.45, 'rim_opacity': 0.15, 'neighbor_contribution': 0.375, 'neighbor_falloff': 0.5}}
             edited = request('edit', profile=profile, theme_mode='follow', flush=True)
             assert not edited.get('error'), edited
             assert control('state')['material']['inner_refraction_amount'] == -43
+            assert control('state')['material']['neighbor_contribution'] == 0.375
+            assert control('state')['material']['neighbor_falloff'] == 0.5
             before_invalid = control('state')
             invalid = request('edit', profile={**profile, 'overrides': {'rim_opacity': 999, 'blur_sigma': 5}}, theme_mode='dark', flush=True)
             assert invalid.get('error') and control('state') == before_invalid
@@ -236,6 +238,8 @@ end
             assert saved['selected'] == 'Signed_glass' and not saved.get('storage_error'), saved
             path = next((base / 'state').rglob('profiles.json'))
             assert json.loads(path.read_text())['profiles'][0]['overrides']['coverage_offset'] < 0
+            assert json.loads(path.read_text())['profiles'][0]['overrides']['neighbor_contribution'] == 0.375
+            assert json.loads(path.read_text())['profiles'][0]['overrides']['neighbor_falloff'] == 0.5
             updated_profile = {**profile, 'overrides': {**profile['overrides'], 'coverage_offset': -0.55}}
             request('edit', profile=updated_profile, theme_mode='follow', flush=True)
             before_overwrite, before_renderer = path.read_text(), control('state')
@@ -271,14 +275,20 @@ end
             restored = wait_for(lambda: (v if (v := view()).get('available') else None), [compositor, shell])
             assert restored['selected'] == 'Signed_glass', restored
             assert control('state')['revision'] == revision, 'Restart unnecessarily reapplied matching profile'
+            assert control('state')['material']['neighbor_contribution'] == 0.375
+            assert control('state')['material']['neighbor_falloff'] == 0.5
             ctl('reload')
             msg('plugin', 'polyv0x/hyprliquid:service', 'all', 'refresh')
             wait_for(lambda: control('state')['material']['inner_refraction_amount'] == -43, [compositor, shell])
+            assert control('state')['material']['neighbor_contribution'] == 0.375
+            assert control('state')['material']['neighbor_falloff'] == 0.5
             renamed = request('rename', name='Signed_glass', new_name='Renamed glass')
             assert renamed['selected'] == 'Renamed_glass'
             request('reset')
             selected = request('select', name='Renamed_glass')
             assert selected['selected'] == 'Renamed_glass'
+            assert control('state')['material']['neighbor_contribution'] == 0.375
+            assert control('state')['material']['neighbor_falloff'] == 0.5
             control('apply', patch={'overrides': {'inner_refraction_amount': -17}})
             msg('plugin', 'polyv0x/hyprliquid:service', 'all', 'refresh')
             wait_for(lambda: view().get('selected') == '', [compositor, shell])
