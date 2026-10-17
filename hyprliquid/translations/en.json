@@ -1,0 +1,4 @@
+{
+  "settings.restore.label": "Restore last settings",
+  "settings.restore.description": "Automatically restore your last accepted changes after startup or renderer reload. Reset to configuration clears them."
+}

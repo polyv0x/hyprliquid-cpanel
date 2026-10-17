@@ -1,0 +1,11 @@
+[[plugin]]
+id = "polyv0x/hyprliquid"
+name = "Hyprliquid"
+version = "0.1.0"
+plugin_api = 24
+author = "polyv0x"
+license = "BSD-3-Clause"
+icon = "droplet"
+description = "Live material controls and profiles for Hyprliquid."
+tags = ["hyprland", "appearance"]
+dependencies = ["hyprctl"]

@@ -1,0 +1,7 @@
+build/
+screenshots/
+*.png
+*.webp
+*.so
+.codebase-memory/
+__pycache__/

@@ -1,0 +1,37 @@
+id = "polyv0x/hyprliquid"
+name = "Hyprliquid"
+version = "0.1.0"
+plugin_api = 24
+author = "polyv0x"
+license = "BSD-3-Clause"
+icon = "droplet"
+description = "Live material controls and profiles for Hyprliquid."
+tags = ["hyprland", "appearance"]
+dependencies = ["hyprctl"]
+
+[[setting]]
+key = "restore_profile"
+type = "bool"
+label_key = "settings.restore.label"
+description_key = "settings.restore.description"
+default = true
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[widget]]
+id = "widget"
+entry = "widget.luau"
+
+[[shortcut]]
+id = "shortcut"
+entry = "shortcut.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 560
+height = 740
+placement = "floating"
+position = "center"
