@@ -6,6 +6,7 @@ Only the temporary plugin copy gets the IPC inspection adapter. Logs/screenshots
 stay in build/; no configuration or plugins in the live desktop are changed.
 """
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -195,6 +196,16 @@ end
             time.sleep(0.6)
             run(['grim', str(BUILD / 'noctalia-panel.png')])
             msg('plugin', 'polyv0x/hyprliquid:panel', 'all', 'test-expand')
+            for preset in ['frosted', 'soft-glass', 'clear-glass', 'frosted-glass', 'clear-edge']:
+                for theme in ('dark', 'light'):
+                    themed = request('edit', profile={'base_preset': preset, 'enabled': True, 'overrides': {}},
+                                     theme_mode=theme, flush=True)
+                    assert not themed.get('error') and themed['theme_mode'] == theme, themed
+                    current = control('state')
+                    assert current['theme'] == theme and current['panel']['overrides'] == {}
+                    assert current['material']['use_measured_face'] == 1
+                    assert math.isclose(current['material']['face_intercept'], 0.06 if theme == 'dark' else 0.30, abs_tol=1e-6)
+            print('PASS: panel service selects real dark/light material variants for all five presets', flush=True)
             profile = {'base_preset': 'platform', 'enabled': True, 'overrides': {'inner_refraction_amount': -43, 'coverage_offset': -0.45, 'rim_opacity': 0.15}}
             edited = request('edit', profile=profile, theme_mode='follow', flush=True)
             assert not edited.get('error'), edited
@@ -209,6 +220,9 @@ end
             assert json.loads(path.read_text())['profiles'][0]['overrides']['coverage_offset'] < 0
             msg('theme-mode-set', 'light')
             wait_for(lambda: control('state')['theme'] == 'light', [compositor, shell])
+            followed = control('state')['material']
+            assert math.isclose(followed['face_intercept'], 0.30, abs_tol=1e-6)
+            assert math.isclose(followed['rim_opacity'], 0.15, abs_tol=1e-6), 'Theme following replaced an explicit slider override'
             print('PASS: real Noctalia VM, panel, signed JSON IPC, atomic profiles and follow-theme', flush=True)
 
             revision = control('state')['revision']

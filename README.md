@@ -43,6 +43,13 @@ Measured face mix stays a continuous 0–1 control. Coverage affects shader edge
 coverage. Window radius, borders, rounding power, per-application rules, and
 layer materials remain configured in Hyprland.
 
+**Theme** selects the renderer preset's dark or light face shading and rim
+highlights. All five current built-in presets provide both variants; clear glass
+and its frosted derivatives use a subtler face blend. **Follow Noctalia** tracks
+the shell's dark/light mode. Explicit slider overrides take precedence, so reset
+a customized field to inherit its theme value again. Older renderer builds
+without preset variants can accept the selection without changing the material.
+
 The displayed status distinguishes pending edits from confirmed changes.
 Slider events are coalesced every 75 ms with one IPC operation in flight, and
 drag-end flushes the latest complete intent. Each write carries the backend

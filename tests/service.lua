@@ -315,6 +315,15 @@ end
 find(h.tree, "preset").props.onChange("1", "lens")
 expect(h.queue[1].request.profile.base_preset == "lens")
 state = applied(baseline, h.queue[1].request.profile); h.reply(reply(state))
+for _, choice in ipairs({ { index = "1", mode = "light" }, { index = "0", mode = "dark" } }) do
+    find(h.tree, "theme").props.onChange(choice.index)
+    expect(h.queue[1].request.profile.theme == choice.mode and h.queue[1].request.profile.base_preset == "lens",
+        "theme selector must send the selected variant without changing the base preset")
+    expect(h.queue[1].request.profile.overrides == nil, "theme selector must inherit renderer variants without pinning scalar values")
+    state = applied(state, h.queue[1].request.profile); h.reply(reply(state))
+    local savedTheme = h.noctalia.json.decode(h.files["/data/profiles.json"])
+    expect(h.view().theme_mode == choice.mode and savedTheme.current.theme_mode == choice.mode)
+end
 find(h.tree, "Refraction-heading").props.onClick()
 find(h.tree, "inner_refraction_amount-slider").props.onChange("-55")
 find(h.tree, "inner_refraction_amount-slider").props.onDragEnd()
