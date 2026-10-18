@@ -12,6 +12,8 @@ the running Hyprland build and dependency ABI. An older renderer is shown as
 unavailable; its legacy `config()`/`preset()` interface is insufficient for live
 controls. Build the renderer with the new `json-c` dependency installed.
 
+<img width="200" src="https://github.com/user-attachments/assets/030d230b-e7f1-4cd8-a71e-2ec3e149c259"/>
+
 ## Local installation
 
 Use this repository as a local source; this also works with Noctalia offline
