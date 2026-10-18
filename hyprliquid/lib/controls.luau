@@ -14,6 +14,7 @@ M.groups = {
 
 function M.label(name)
     if name == "use_measured_face" then return "Measured face mix" end
+    if name == "neighbor_falloff" then return "Reflection falloff" end
     local label = name:gsub("_", " ")
     return label:sub(1, 1):upper() .. label:sub(2)
 end

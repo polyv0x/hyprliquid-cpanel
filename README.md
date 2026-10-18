@@ -56,13 +56,18 @@ Layer surfaces retain native behavior.
 Existing profiles default to `1`. The control appears when the renderer exposes
 this parameter.
 
-**Neighbor falloff** adds a smooth exponential fade from the receiving pane's
-rounded edge toward its center. `0` keeps uniform contribution; higher values
-fade it faster. Try `0.5`, which halves the contribution every 16 logical pixels
-at the default effect scale. The main frost stays present. This is an artistic
-edge fade, not a simulation of physical caustics. It affects neighbour images
-in both refraction and edge bleed, and defaults to `0` in existing profiles.
-Underlying windows stay visible instead of fading toward the wallpaper.
+**Reflection falloff** (formerly Neighbor falloff) softens detail into the
+existing frost while preserving brightness. `0` keeps the material's usual
+blur ramp; higher values soften detail faster. Try `0.5`, which halves the
+remaining sharp detail every 16 logical pixels at the default effect scale.
+The same curve applies before and after an image passes underneath the pane,
+so dragging does not fade it out toward wallpaper and then bring it back.
+It also softens wallpaper detail in the window's clear edge. Fully frosted
+areas, already blurred edge bleed and glass opacity stay unchanged.
+**Blur sigma** sets the final softness; with zero blur, falloff has no effect.
+This is an artistic transition into frost, not a physical caustic simulation.
+The saved parameter remains `neighbor_falloff`, with default `0`; existing
+profiles and slider values are preserved. Layer surfaces are unaffected.
 
 **Theme** selects the renderer preset's dark or light face shading and rim
 highlights. All five current built-in presets provide both variants; clear glass
