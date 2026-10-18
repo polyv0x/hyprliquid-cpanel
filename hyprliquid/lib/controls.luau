@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 polyv0x
+-- SPDX-License-Identifier: GPL-3.0-or-later
+
 -- Presentation only: names, defaults, bounds and preset definitions come from IPC.
 local M = {}
 M.groups = {

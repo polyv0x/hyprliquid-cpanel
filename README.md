@@ -30,9 +30,8 @@ include **Restore last settings** (enabled by default).
 
 Alternatively, copy the `hyprliquid/` directory to
 `${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins/hyprliquid/` and enable it.
-Luau changes hot-reload; manifest changes need a Noctalia config reload. Keep
-hosting private if adding a git source. Do not store profiles in the source or
-installation directory.
+Luau changes hot-reload; manifest changes need a Noctalia config reload. Do not
+store profiles in the source or installation directory.
 
 ## Editing and ownership
 
@@ -161,3 +160,11 @@ The implementation follows the official Noctalia
 [timer service](https://github.com/noctalia-dev/official-plugins/blob/main/timer/service.luau),
 and [v5 runtime documentation](https://docs.noctalia.dev/noctalia/plugins/development/runtime-api/).
 It uses `.luau` entries and `plugin.toml`; the legacy QML plugin system does not apply.
+
+## License
+
+Copyright (c) 2026, polyv0x.
+
+This project is licensed under the GNU General Public License, version 3 or
+(at your option) any later version (`GPL-3.0-or-later`). See [LICENSE](LICENSE)
+for the full terms.

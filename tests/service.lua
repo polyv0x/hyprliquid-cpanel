@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 polyv0x
+-- SPDX-License-Identifier: GPL-3.0-or-later
+
 -- Deterministic host harness. Run the production modules with delayed IPC replies
 -- and filesystem failures; the nested test exercises Noctalia's real JSON/VM/UI.
 local root = arg[1] or "."

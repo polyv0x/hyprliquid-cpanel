@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 polyv0x
+-- SPDX-License-Identifier: GPL-3.0-or-later
+
 local bridge = require("./lib/bridge.luau")
 local profiles = require("./lib/profiles.luau")
 local data, storagePath, storageError = profiles.load()

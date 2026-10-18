@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 polyv0x
+-- SPDX-License-Identifier: GPL-3.0-or-later
+
 -- The only renderer transport. JSON stays a single argv value; no shell or Lua eval.
 local M = {}
 

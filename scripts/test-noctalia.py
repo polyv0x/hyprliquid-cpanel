@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 polyv0x
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Run the installed Noctalia and renderer in an isolated nested compositor.
 
 Usage: python3 scripts/test-noctalia.py /path/to/hyprliquid
