@@ -1,6 +1,7 @@
 # Hyprliquid for Noctalia
 
-A Noctalia v5 companion for the native Hyprliquid renderer: choose a preset,
+A Noctalia v5 companion for the native
+[Hyprliquid renderer](https://github.com/polyv0x/hyprliquid): choose a preset,
 adjust the material live, follow the shell theme, and save custom profiles.
 Plugin id: `polyv0x/hyprliquid`. This repository contains the controls; the
 renderer and its control API stay in the separate Hyprliquid repository.
