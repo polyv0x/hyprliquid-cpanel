@@ -85,7 +85,7 @@ local function maybeRestore(state, previous)
         enqueue(profiles.renderer(saved), saved.theme_mode, data.selected, false)
         return true
     end
-    release(state, "Renderer changed outside the panel; automatic restoration released")
+    release(state, "Glass settings changed elsewhere; automatic restoration stopped")
     return false
 end
 
@@ -100,7 +100,7 @@ probe = function()
             available = false
             pending = nil
             draft = confirmed and bridge.profile(confirmed) or nil
-            errorMessage = err or "Invalid Hyprliquid description"
+            errorMessage = err or "Could not read the available glass controls. Update Hyprliquid and reconnect."
             publish()
             return
         end
@@ -112,13 +112,13 @@ probe = function()
         if not wasAvailable then errorMessage = nil end
         if changed(previous, confirmed) then
             if pending then
-                release(confirmed, "Renderer changed while an edit was pending; edit cancelled")
+                release(confirmed, "Glass settings changed elsewhere; pending changes cancelled")
             else
                 draft, themeMode = bridge.profile(confirmed), confirmed.theme
                 if not maybeRestore(confirmed, previous) and not firstRead and changed(previous, confirmed) then
                     -- An external runtime edit in the same renderer generation wins.
                     if previous and previous.epoch == confirmed.epoch and previous.generation == confirmed.generation then
-                        release(confirmed, "Renderer changed outside the panel")
+                        release(confirmed, "Glass settings changed elsewhere")
                     end
                 end
             end

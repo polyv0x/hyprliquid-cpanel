@@ -212,7 +212,7 @@ end
                     raise RuntimeError(f'Request {ident} timed out: ' + repr({key: current.get(key) for key in ('ack', 'pending', 'error', 'draft')}))
 
             ready = wait_for(lambda: (v if (v := view()).get('available') else None), [compositor, shell])
-            assert len(ready['descriptor']['parameters']) == 34
+            assert len(ready['descriptor']['parameters']) == 33
             msg('panel-toggle', 'polyv0x/hyprliquid:panel')
             time.sleep(0.6)
             run(['grim', str(BUILD / 'noctalia-panel.png')])
@@ -224,10 +224,9 @@ end
                     assert not themed.get('error') and themed['theme_mode'] == theme, themed
                     current = control('state')
                     assert current['theme'] == theme and current['panel']['overrides'] == {}
-                    assert current['material']['use_measured_face'] == 1
                     assert math.isclose(current['material']['face_intercept'], 0.06 if theme == 'dark' else 0.30, abs_tol=1e-6)
             print('PASS: panel service selects real dark/light material variants for all five presets', flush=True)
-            profile = {'base_preset': 'platform', 'enabled': True, 'overrides': {'inner_refraction_amount': -43, 'coverage_offset': -0.45, 'rim_opacity': 0.15, 'neighbor_contribution': 0.375, 'neighbor_falloff': 0.5}}
+            profile = {'base_preset': 'soft-glass', 'enabled': True, 'overrides': {'inner_refraction_amount': -43, 'coverage_offset': -0.45, 'rim_opacity': 0.15, 'neighbor_contribution': 0.375, 'neighbor_falloff': 0.5}}
             edited = request('edit', profile=profile, theme_mode='follow', flush=True)
             assert not edited.get('error'), edited
             assert control('state')['material']['inner_refraction_amount'] == -43
@@ -274,6 +273,10 @@ end
             revision = control('state')['revision']
             stop(shell); shell = None
             assert control('state')['revision'] == revision, 'Noctalia exit changed renderer'
+            legacy = json.loads(path.read_text())
+            legacy['current']['overrides']['use_measured_face'] = 0.5
+            legacy['profiles'][0]['overrides']['use_measured_face'] = 0
+            path.write_text(json.dumps(legacy))
             shell = start()
             restored = wait_for(lambda: (v if (v := view()).get('available') else None), [compositor, shell])
             assert restored['selected'] == 'Signed_glass', restored
@@ -304,7 +307,7 @@ end
             assert control('state') == before_disable, 'Disabling frontend changed renderer'
             msg('plugins', 'enable', 'polyv0x/hyprliquid')
             wait_for(lambda: view().get('available'), [compositor, shell])
-            print('PASS: real restart/reload, save/select/rename/delete and terminal ownership', flush=True)
+            print('PASS: real restart/reload, profile migration, save/select/rename/delete and terminal ownership', flush=True)
 
             assert ctl('plugin', 'unload', str(library)) == 'ok'
             msg('plugin', 'polyv0x/hyprliquid:service', 'all', 'refresh')

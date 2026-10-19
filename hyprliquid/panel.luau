@@ -87,7 +87,7 @@ local function parameterRow(parameter, waiting)
         ui.row({ gap = 8, align = "center" }, {
             ui.label({ text = controls.label(name), flexGrow = 1 }),
             text(string.format("%.4g", value), "on_surface"),
-            ui.button({ key = name .. "-reset", glyph = "restore", tooltip = "Inherit this value from the base preset",
+            ui.button({ key = name .. "-reset", glyph = "restore", tooltip = "Reset to preset value",
                 variant = "ghost", controlSize = "sm", enabled = overridden,
                 onClick = function() draft.overrides[name] = nil; edit(true) end }),
         }),
@@ -104,12 +104,10 @@ local function parameterRow(parameter, waiting)
             end,
             onDragEnd = flush,
         }),
-        text(overridden and "Custom value" or "Inherited from the preset / configuration"),
+        text(overridden and "Custom value" or "From the preset or Hyprland settings"),
     }
     if controls.logarithmic(parameter) then
-        table.insert(children, text("Inverse height · logarithmic scale. Larger values concentrate the effect closer to the edge."))
-    elseif name == "use_measured_face" then
-        table.insert(children, text("Continuous blend from the analytic face (0) to the measured face (1)."))
+        table.insert(children, text("Higher values keep the effect closer to the edge."))
     end
     return ui.column({ key = name, gap = 4 }, children)
 end
@@ -136,7 +134,7 @@ render = function()
     if view.error then table.insert(body, text(view.error, "error")) end
     if view.storage_error then table.insert(body, text(view.storage_error, "error")) end
     if not ready then
-        table.insert(body, text("Hyprliquid is unavailable. Load a renderer with control API 1 to edit its material."))
+        table.insert(body, text("Hyprliquid is unavailable. Make sure the plugin is up to date and loaded in Hyprland, then reconnect."))
         table.insert(body, ui.button({ text = "Reconnect", onClick = function() send("refresh"); render() end }))
     else
         table.insert(body, ui.row({ gap = 12, align = "center" }, {
@@ -149,7 +147,7 @@ render = function()
         }))
         local status = "Following Hyprland configuration"
         if view.confirmed.active then
-            status = view.storage_error and "Panel overrides active"
+            status = view.storage_error and "Custom settings active"
                 or (view.restore_enabled and "Changes saved · restored on restart" or "Changes saved · restoration disabled")
         end
         table.insert(body, text(waiting and "Applying changes…" or status, waiting and "primary" or nil))
@@ -218,7 +216,8 @@ render = function()
 
         local parameters = {}
         for _, parameter in ipairs(view.descriptor.parameters) do parameters[parameter.name] = parameter end
-        local covered = {}
+        -- Hide obsolete parameters also reported by older plugin versions.
+        local covered = { use_measured_face = true }
         for _, group in ipairs(controls.groups) do
             local children = {
                 ui.button({ key = group.name .. "-heading", text = group.name, glyph = expanded[group.name] and "chevron-down" or "chevron-right",

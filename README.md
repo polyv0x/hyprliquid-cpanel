@@ -3,166 +3,110 @@
 A Noctalia v5 companion for the native
 [Hyprliquid renderer](https://github.com/polyv0x/hyprliquid): choose a preset,
 adjust the material live, follow the shell theme, and save custom profiles.
-Plugin id: `polyv0x/hyprliquid`. This repository contains the controls; the
-renderer and its control API stay in the separate Hyprliquid repository.
 
-Requires Noctalia plugin API **24** or newer (tested with **v5.2.0**), `hyprctl`,
-and a loaded Hyprliquid build exposing **control API 1**. Hyprliquid must match
-the running Hyprland build and dependency ABI. An older renderer is shown as
-unavailable; its legacy `config()`/`preset()` interface is insufficient for live
-controls. Build the renderer with the new `json-c` dependency installed.
+Plugin ID: `polyv0x/hyprliquid`.
 
 <img width="200" src="https://github.com/user-attachments/assets/030d230b-e7f1-4cd8-a71e-2ec3e149c259"/>
 
-## Local installation
+## Installation
 
-Use this repository as a local source; this also works with Noctalia offline
-mode. No remote repository or public catalog is required.
+Requires Noctalia with plugin API **24** or newer (tested with **v5.2.0**),
+`hyprctl`, and the [Hyprliquid plugin](https://github.com/polyv0x/hyprliquid)
+installed and loaded in Hyprland. Hyprliquid must match the running Hyprland
+build. Start Noctalia, then:
 
 ```sh
-noctalia plugins lint ./hyprliquid
-noctalia msg plugins source add hyprliquid-dev path /home/polyvox/hyprliquid-cpanel
+git clone https://github.com/polyv0x/hyprliquid-cpanel.git
+cd hyprliquid-cpanel
+noctalia msg plugins source add hyprliquid path "$PWD"
 noctalia msg plugins enable polyv0x/hyprliquid
 noctalia msg panel-toggle polyv0x/hyprliquid:panel
 ```
 
+Keep the cloned directory in place while it is registered as a plugin source.
 Add `polyv0x/hyprliquid:widget` through the bar's Add-widget picker, or add
 `polyv0x/hyprliquid:shortcut` in Control Center shortcut settings. Both open the
-same panel. The service starts when the plugin is enabled. Plugin settings
-include **Restore last settings** (enabled by default).
+same panel.
 
 Alternatively, copy the `hyprliquid/` directory to
 `${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins/hyprliquid/` and enable it.
-Luau changes hot-reload; manifest changes need a Noctalia config reload. Do not
-store profiles in the source or installation directory.
 
-## Editing and ownership
+## Adjusting the glass
 
-The panel discovers presets, scalar defaults, and bounds from the renderer.
-All 34 material parameters are grouped; expand a group to see its controls.
-Inverse-height controls use a logarithmic scale and display their actual values.
-Measured face mix stays a continuous 0–1 control. Coverage affects shader edge
-coverage. Window radius, borders, rounding power, per-application rules, and
-layer materials remain configured in Hyprland.
+Choose a **Base preset**, select a **Theme**, and expand a control group to
+adjust the material. Changes apply live and save automatically. The **Glass
+effect** switch turns the effect on or off.
+
+The five built-in presets offer different levels of blur and refraction:
+
+| Preset | Appearance |
+| --- | --- |
+| `frosted` | Soft, even blur |
+| `soft-glass` | Gentle refraction, soft blur, and rim highlights |
+| `clear-glass` | Sharp backdrop with strong refraction and color fringes |
+| `frosted-glass` | Strong refraction with blur across the whole pane |
+| `clear-edge` | Frosted center with a clear, refractive border |
+
+Configured custom presets also appear in the picker. Selecting a base preset
+resets the sliders to that preset's values. Each slider's reset button restores
+its preset value individually.
+
+**Theme** selects dark or light face shading and rim highlights. **Follow
+Noctalia** matches the shell's dark/light mode. Customized slider values take
+precedence; reset a slider to let it follow the preset and theme again.
 
 **Refraction → Neighbor contribution** adjusts how strongly neighbouring
 windows appear in the glass, including floating panes that touch or overlap.
 `1` preserves the full neighbour scene; `0` removes the additional neighbour
-image while preserving windows underneath the glass.
-Lower values soften neighbour content without fading the main frosted area.
-It affects text and opaque windows too. The control acts on the neighbour image
-sampled outside the receiving pane; windows directly underneath still follow
-normal transparency and stacking, including at refracted edges. Partial overlap
-is handled per pixel, so adjacent portions still respond to the sliders.
-Layer surfaces retain native behavior.
-Existing profiles default to `1`. The control appears when the renderer exposes
-this parameter.
+image while preserving windows underneath the glass. Lower values soften
+neighbour content without fading the main frosted area. The default is `1`.
 
-**Reflection falloff** (formerly Neighbor falloff) softens detail into the
-existing frost while preserving brightness. `0` keeps the material's usual
-blur ramp; higher values soften detail faster. Try `0.5`, which halves the
-remaining sharp detail every 16 logical pixels at the default effect scale.
-The same curve applies before and after an image passes underneath the pane,
-so dragging does not fade it out toward wallpaper and then bring it back.
-It also softens wallpaper detail in the window's clear edge. Fully frosted
-areas, already blurred edge bleed and glass opacity stay unchanged.
-**Blur sigma** sets the final softness; with zero blur, falloff has no effect.
-This is an artistic transition into frost, not a physical caustic simulation.
-The saved parameter remains `neighbor_falloff`, with default `0`; existing
-profiles and slider values are preserved. Layer surfaces are unaffected.
+**Reflection falloff** softens reflected and wallpaper detail into the frost
+while preserving brightness. `0` keeps the preset's usual blur transition;
+higher values soften detail faster, up to the default of `1`. **Blur sigma**
+sets the final softness. With zero blur, falloff has no effect. These neighbour
+controls affect windows; layer surfaces keep their configured appearance.
 
-**Theme** selects the renderer preset's dark or light face shading and rim
-highlights. All five current built-in presets provide both variants; clear glass
-and its frosted derivatives use a subtler face blend. **Follow Noctalia** tracks
-the shell's dark/light mode. Explicit slider overrides take precedence, so reset
-a customized field to inherit its theme value again. Older renderer builds
-without preset variants can accept the selection without changing the material.
+All 33 material controls are grouped in the panel. Window radius, borders,
+rounding, per-application rules, and layer surfaces remain configured in
+Hyprland. Windows with an explicit preset rule keep that preset.
 
-The displayed status distinguishes pending edits from confirmed changes.
-Slider events are coalesced every 75 ms with one IPC operation in flight, and
-drag-end flushes the latest complete intent. Each write carries the backend
-epoch/revision. Render-driven slider/select callbacks are ignored, including
-native clamping of invalid pending values. Failed requests roll back the draft
-and show an error; external
-changes cancel pending edits instead of silently overwriting them.
+## Saved settings and profiles
 
-Each parameter's reset removes its explicit override. **Reset to configuration**
-removes the entire panel layer and clears the saved-profile selection. Choosing
-a base preset starts with that preset's inherited scalar values. **Save**
-saves the current confirmed base, theme mode, enable state, and sparse overrides.
-Spaces in names become underscores when saving or renaming, before checking for
-an existing name.
-Saving an existing name asks whether to overwrite that profile; Cancel keeps it
-unchanged. Names remain unique. **Rename** and **Delete** operate on the chosen
-saved profile; deleting never deletes a renderer config preset or changes the
-current material.
-Editing after selecting a saved profile updates the automatically saved current
-settings and leaves that named profile unchanged. Save creates or updates a
-named snapshot; it is not required to keep ordinary edits across restarts.
+**Restore last settings** is enabled by default in the plugin settings. It
+restores the last applied material after a restart or Hyprland configuration
+reload. Turning it off leaves the current appearance unchanged.
 
-Current settings and named profiles are versioned JSON in
-`noctalia.pluginDataDir()/profiles.json`, written
-to a sibling temporary file then renamed. A corrupt or unsupported file is
-preserved and reported, and cannot be overwritten by the panel. Profiles
-survive plugin updates and Noctalia restarts. Existing version 1 profiles migrate
-automatically without losing their names or selection.
+Use **Save** to keep a named profile of the current preset, theme, enable state,
+and slider values. Spaces in names become underscores. Saving an existing name
+asks for confirmation before replacing it. **Rename** and **Delete** operate on
+the selected saved profile; deleting a profile leaves the current appearance
+unchanged.
 
-Every accepted edit automatically saves the enable state, base preset, theme
-choice, and explicit parameter overrides. Pending or rejected edits are never
-saved. With restoration enabled, the last accepted settings are restored after
-renderer load or config reload, following an initial state read. A saved
-epoch/revision checkpoint lets a Noctalia restart adopt matching active settings
-without writing to the renderer again. Initial activation also captures an
-already-active material, so installing this version preserves current edits.
+Editing after selecting a profile saves the current settings automatically.
+The named profile keeps its saved values until it is explicitly overwritten.
 
-**Reset to configuration** clears the automatically saved settings so they do
-not return on restart. A terminal edit or reset in the same renderer generation
-releases panel ownership. Changing restore settings affects future restoration,
-not the currently applied material. Follow Noctalia changes only while the panel
-still owns that choice; explicit dark/light stay explicit. Named profiles remain
-available even when automatic settings are cleared.
+**Reset to configuration** returns to the Hyprland configuration and clears
+the automatically saved settings. Named profiles remain available. Closing the
+panel, disabling the Noctalia plugin, or exiting Noctalia leaves the current
+material active; reset first to return to the configured appearance.
 
-Keep the renderer's loading declaration in Hyprland's Lua config. Material
-changes stay in Noctalia's data directory; the panel does not rewrite Lua or
-reload Hyprland for slider changes. On a standard installation the file is
+Profiles survive plugin updates and Noctalia restarts. On a standard
+installation, they are stored in
 `~/.local/state/noctalia/plugins/data/polyv0x/hyprliquid/profiles.json`.
 
-Closing the panel, disabling the plugin, or exiting Noctalia leaves the last
-accepted material in the renderer. Reset first to return to your configured
-baseline. An abrupt frontend exit cannot break rendering. Recovery checks run
-every 15 seconds while closed, or every 2 seconds while open; reopening or
-Reconnect requests an immediate check. No background network calls are used.
+## Troubleshooting
 
-## Development and verification
+If Hyprliquid is unavailable, check that the Hyprliquid plugin is installed,
+up to date, and loaded in Hyprland, then choose **Reconnect**. Rebuild Hyprliquid
+after updating Hyprland.
 
-```sh
-noctalia plugins lint hyprliquid
-lua tests/service.lua
-python3 scripts/test-noctalia.py /home/polyvox/hyprliquid
-```
+If settings change outside the panel, the panel shows those changes and cancels
+pending edits. Adjust a control to start editing from the new settings.
 
-The deterministic Lua harness uses the production service and panel callbacks
-to exercise coalescing, delayed replies, conflicts, IPC failure, profile-file
-failure, restore ownership, themes, and field resets. The scripts intentionally
-use the Lua-compatible subset of Luau, so the harness needs only `lua`.
-
-The integration script requires a parent Wayland session, Hyprland, Noctalia,
-`dbus-daemon`, `grim`, and a built compatible renderer. It starts a
-disposable compositor and Noctalia with isolated config, runtime, data, state,
-and D-Bus session. A test-only adapter in the temporary plugin copy allows state
-inspection and drives the service. It checks real Luau/JSON IPC, the panel,
-profile persistence, restart/reload, theme following, and reconnect behavior.
-Logs and screenshots stay under ignored `build/`.
-
-Run the renderer's `make -j4 all test` and `python3 scripts/test-nested.py` too.
-Review and build backend changes in that repository. Never overwrite a shared
-library in place while a compositor has it mapped.
-
-The implementation follows the official Noctalia
-[example panel](https://github.com/noctalia-dev/official-plugins/tree/main/example),
-[timer service](https://github.com/noctalia-dev/official-plugins/blob/main/timer/service.luau),
-and [v5 runtime documentation](https://docs.noctalia.dev/noctalia/plugins/development/runtime-api/).
-It uses `.luau` entries and `plugin.toml`; the legacy QML plugin system does not apply.
+If profiles cannot be saved, the panel shows an error and preserves the existing
+file. Check the file's permissions and available disk space. A damaged or
+unsupported profile file is also preserved so it can be backed up or recovered.
 
 ## License
 

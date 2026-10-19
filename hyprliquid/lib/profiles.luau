@@ -64,6 +64,10 @@ function M.load()
         end
         data.version = 2
     end
+    -- Drop an obsolete override before restoring saved settings. Keep all other
+    -- fields for the renderer to validate normally.
+    for _, profile in ipairs(data.profiles) do profile.overrides.use_measured_face = nil end
+    if data.current then data.current.overrides.use_measured_face = nil end
     return data, path
 end
 

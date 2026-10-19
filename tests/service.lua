@@ -102,7 +102,7 @@ local function host(initialFiles)
     return h
 end
 
-local baseline = { epoch = "epoch1", revision = 1, generation = 1, enabled = true, base_preset = "platform", theme = "dark",
+local baseline = { epoch = "epoch1", revision = 1, generation = 1, enabled = true, base_preset = "soft-glass", theme = "dark",
     active = false, panel = { overrides = {} }, material = { rim_opacity = 0.6, inner_refraction_amount = -10, coverage_offset = -0.25 } }
 local function reply(state)
     return { api = 1, ok = true, state = copy(state), parameters = {
@@ -110,7 +110,7 @@ local function reply(state)
         { name = "inner_refraction_amount", min = -120, max = 120, default = 0 },
         { name = "coverage_offset", min = -1, max = 1, default = 0.1 },
         { name = "outer_refraction_inv_height", min = 0.001, max = 1, default = 0.034 },
-    }, presets = { { id = "platform", valid = true }, { id = "lens", valid = true } } }
+    }, presets = { { id = "soft-glass", valid = true }, { id = "clear-glass", valid = true } } }
 end
 local function applied(state, profile)
     local result = copy(state)
@@ -191,7 +191,7 @@ h.request("save", { new_name = "Before" })
 h.request("save", { new_name = "Replace me" })
 h.request("save", { new_name = "After" })
 local originals = copy(h.view().profiles)
-local replacement = { base_preset = "lens", enabled = false, overrides = { inner_refraction_amount = -31 } }
+local replacement = { base_preset = "clear-glass", enabled = false, overrides = { inner_refraction_amount = -31 } }
 h.request("edit", { profile = replacement, theme_mode = "follow", flush = true })
 state = applied(baseline, h.queue[1].request.profile); h.reply(reply(state))
 file = h.files["/data/profiles.json"]
@@ -218,7 +218,7 @@ local overwritten = h.noctalia.json.decode(h.files["/data/profiles.json"])
 expect(not h.view().error and not h.view().storage_error and #overwritten.profiles == 3)
 expect(equal(overwritten.profiles[1], originals[1]) and equal(overwritten.profiles[3], originals[3]),
     "overwrite must preserve other profiles and list order")
-expect(overwritten.profiles[2].name == "Replace_me" and overwritten.profiles[2].base_preset == "lens"
+expect(overwritten.profiles[2].name == "Replace_me" and overwritten.profiles[2].base_preset == "clear-glass"
     and overwritten.profiles[2].enabled == false and overwritten.profiles[2].theme_mode == "follow"
     and overwritten.profiles[2].overrides.inner_refraction_amount == -32)
 expect(overwritten.selected == "Replace_me" and overwritten.current.overrides.inner_refraction_amount == -32)
@@ -264,7 +264,7 @@ expect(not h.view().available and not h.view().pending)
 h.tick(1); h.reply(reply(state))
 expect(h.view().available and #h.queue == 0)
 h.reject = true; edit(h, -9, true)
-expect(not h.view().available and h.view().error == "Could not start hyprctl")
+expect(not h.view().available and h.view().error:find("hyprctl", 1, true))
 print("PASS: follow theme, explicit theme, conflicts, timeouts, failed starts and reconnect")
 
 h = host({ ["/data/profiles.json"] = "broken-json" })
@@ -275,7 +275,7 @@ print("PASS: corrupt profile file preserved")
 h = host(); h.start()
 local incompatible = reply(baseline); incompatible.api = 0
 h.reply(incompatible)
-expect(not h.view().available and h.view().error:find("Incompatible"))
+expect(not h.view().available and h.view().error:find("incompatible", 1, true))
 h.request("refresh"); h.tick(1); h.reply(reply(baseline))
 expect(h.view().available)
 print("PASS: incompatible renderer recovery")
@@ -346,7 +346,7 @@ print("PASS: restoration preference and delayed renderer startup")
 
 h = newHost()
 local legacy = { version = 1, profiles = { { name = "Legacy", base_preset = "lens", enabled = false,
-    theme_mode = "dark", overrides = { inner_refraction_amount = -63 } } }, selected = "Legacy" }
+    theme_mode = "dark", overrides = { inner_refraction_amount = -63, use_measured_face = 0.5 } } }, selected = "Legacy" }
 h.files["/data/profiles.json"] = h.noctalia.json.encode(legacy)
 h.start(); h.reply(reply(baseline)); h.tick(75)
 expect(h.queue[1].request.profile.enabled == false and h.queue[1].request.profile.overrides.inner_refraction_amount == -63)
@@ -374,12 +374,12 @@ local function find(node, key)
     if node.props.key == key or node.kind == key then return node end
     for _, child in ipairs(node.children) do local found = find(child, key); if found then return found end end
 end
-find(h.tree, "preset").props.onChange("1", "lens")
-expect(h.queue[1].request.profile.base_preset == "lens")
+find(h.tree, "preset").props.onChange("1", "clear-glass")
+expect(h.queue[1].request.profile.base_preset == "clear-glass")
 state = applied(baseline, h.queue[1].request.profile); h.reply(reply(state))
 for _, choice in ipairs({ { index = "1", mode = "light" }, { index = "0", mode = "dark" } }) do
     find(h.tree, "theme").props.onChange(choice.index)
-    expect(h.queue[1].request.profile.theme == choice.mode and h.queue[1].request.profile.base_preset == "lens",
+    expect(h.queue[1].request.profile.theme == choice.mode and h.queue[1].request.profile.base_preset == "clear-glass",
         "theme selector must send the selected variant without changing the base preset")
     expect(h.queue[1].request.profile.overrides == nil, "theme selector must inherit renderer variants without pinning scalar values")
     state = applied(state, h.queue[1].request.profile); h.reply(reply(state))
@@ -398,7 +398,7 @@ logarithmicSlider.onChange(string.format("%.6f", snapped))
 expect(#h.calls == callsBeforeEcho and not h.view().pending, "native step rounding must not create a material override")
 find(h.tree, "inner_refraction_amount-slider").props.onChange("-55.000000")
 find(h.tree, "inner_refraction_amount-slider").props.onDragEnd()
-find(h.tree, "preset").props.onChange("1", "lens")
+find(h.tree, "preset").props.onChange("1", "clear-glass")
 find(h.tree, "enabled").props.onChange("true")
 expect(#h.calls == callsBeforeEcho and not h.view().pending, "render echoes must not create user edits")
 find(h.tree, "inner_refraction_amount-reset").props.onClick()
